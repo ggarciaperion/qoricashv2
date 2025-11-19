@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Operaciones - QoriCash Trading{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-list-ul"></i> Gestión de Operaciones</h2>
+            <p class="text-muted">Historial completo de operaciones</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('operations.create_page') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nueva Operación
+            </a>
+            <button class="btn btn-outline-secondary" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros Rápidos -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary active" onclick="filterByStatus('all')">
+                    Todas
+                </button>
+                <button type="button" class="btn btn-outline-warning" onclick="filterByStatus('Pendiente')">
+                    Pendientes
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="filterByStatus('En proceso')">
+                    En Proceso
+                </button>
+                <button type="button" class="btn btn-outline-success" onclick="filterByStatus('Completada')">
+                    Completadas
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="filterByStatus('Cancelado')">
+                    Canceladas
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de Operaciones -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <table id="operationsTable" class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID Op.</th>
+                                <th>Cliente</th>
+                                <th>Tipo</th>
+                                <th>USD</th>
+                                <th>T.C.</th>
+                                <th>PEN</th>
+                                <th>Estado</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in operations %}
+                            <tr>
+                                <td><strong>{{ op.operation_id }}</strong></td>
+                                <td>{{ op.client.name }}</td>
+                                <td>
+                                    {% if op.operation_type == 'Compra' %}
+                                        <span class="badge bg-success">Compra</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Venta</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">$ {{ "%.2f"|format(op.amount_usd) }}</td>
+                                <td class="text-center">{{ "%.4f"|format(op.exchange_rate) }}</td>
+                                <td class="text-end">S/ {{ "%.2f"|format(op.amount_pen) }}</td>
+                                <td>
+                                    {% if op.status == 'Pendiente' %}
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    {% elif op.status == 'En proceso' %}
+                                        <span class="badge bg-info">En Proceso</span>
+                                    {% elif op.status == 'Completada' %}
+                                        <span class="badge bg-success">Completada</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Cancelado</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ op.user.username }}</td>
+                                <td>{{ op.created_at.strftime('%d/%m/%Y %H:%M') if op.created_at else '-' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="viewOperation({{ op.id }})" title="Ver Detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        {% if op.status in ['Pendiente', 'En proceso'] %}
+                                        <button class="btn btn-outline-primary" onclick="updateStatus({{ op.id }})" title="Actualizar Estado">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="uploadProof({{ op.id }})" title="Subir Comprobante">
+                                            <i class="bi bi-upload"></i>
+                                        </button>
+                                        {% if user.role in ['Master', 'Trader'] %}
+                                        <button class="btn btn-outline-danger" onclick="cancelOperation({{ op.id }})" title="Cancelar">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Operación -->
+<div class="modal fade" id="viewOperationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Operación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="operationDetails">
+                <!-- Cargado dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Actualizar Estado -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Actualizar Estado de Operación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <input type="hidden" name="operation_id" id="status_operation_id">
+                    <p>Operación: <strong id="status_operation_code"></strong></p>
+                    <p>Estado actual: <span id="status_current"></span></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nuevo Estado</label>
+                        <select class="form-select" name="status" id="status_new" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="En proceso">En Proceso</option>
+                            <option value="Completada">Completada</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notas (opcional)</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmUpdateStatus()">Actualizar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Subir Comprobante -->
+<div class="modal fade" id="uploadProofModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subir Comprobantes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadProofForm" enctype="multipart/form-data">
+                    <input type="hidden" name="operation_id" id="proof_operation_id">
+                    <p>Operación: <strong id="proof_operation_code"></strong></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Comprobante de Pago (Cliente)</label>
+                        <input type="file" class="form-control" name="payment_proof" accept="image/*,.pdf">
+                        <small class="form-text text-muted">Formatos: JPG, PNG, PDF (máx 10MB)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Comprobante del Operador</label>
+                        <input type="file" class="form-control" name="operator_proof" accept="image/*,.pdf">
+                        <small class="form-text text-muted">Formatos: JPG, PNG, PDF (máx 10MB)</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmUploadProof()">Subir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cancelar Operación -->
+<div class="modal fade" id="cancelOperationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Cancelar Operación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelOperationForm">
+                    <input type="hidden" name="operation_id" id="cancel_operation_id">
+                    <p>Operación: <strong id="cancel_operation_code"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Esta acción no se puede deshacer
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Razón de Cancelación *</label>
+                        <textarea class="form-control" name="reason" required rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Mantener</button>
+                <button type="button" class="btn btn-danger" onclick="confirmCancelOperation()">Sí, Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/operations.js') }}"></script>
+<script>
+$(document).ready(function() {
+    // Inicializar DataTable
+    window.operationsDataTable = $('#operationsTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+        },
+        order: [[0, 'desc']],
+        pageLength: 50,
+        columnDefs: [
+            { targets: [3, 4, 5], className: 'text-end' }
+        ]
+    });
+    
+    // Conectar SocketIO para actualizaciones en tiempo real
+    connectSocketIO();
+});
+
+function filterByStatus(status) {
+    if (status === 'all') {
+        window.operationsDataTable.column(6).search('').draw();
+    } else {
+        window.operationsDataTable.column(6).search(status).draw();
+    }
+    
+    // Actualizar botones activos
+    $('.btn-group button').removeClass('active');
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}

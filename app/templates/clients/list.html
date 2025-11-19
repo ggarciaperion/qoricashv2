@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes - QoriCash Trading{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-people"></i> Gestión de Clientes</h2>
+            <p class="text-muted">Administra la base de clientes</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClientModal">
+                <i class="bi bi-person-plus"></i> Nuevo Cliente
+            </button>
+        </div>
+    </div>
+    
+    <!-- Tabla de Clientes -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <table id="clientsTable" class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Banco</th>
+                                <th>Estado</th>
+                                <th>Operaciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in clients %}
+                            <tr>
+                                <td>{{ c.id }}</td>
+                                <td><strong>{{ c.name }}</strong></td>
+                                <td>{{ c.dni }}</td>
+                                <td>{{ c.email }}</td>
+                                <td>{{ c.phone or '-' }}</td>
+                                <td>{{ c.bank_name or '-' }}</td>
+                                <td>
+                                    {% if c.status == 'Activo' %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ c.get_total_operations() }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="viewClient({{ c.id }})" title="Ver Detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="editClient({{ c.id }})" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="uploadDNI({{ c.id }})" title="Subir DNI">
+                                            <i class="bi bi-upload"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" onclick="toggleClientStatus({{ c.id }})" title="Activar/Desactivar">
+                                            <i class="bi bi-toggle-on"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Cliente -->
+<div class="modal fade" id="createClientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar Nuevo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createClientForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Completo *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">DNI *</label>
+                            <input type="text" class="form-control" name="dni" required maxlength="8" pattern="[0-9]{8}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="phone" maxlength="9">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6>Información Bancaria</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Banco</label>
+                            <select class="form-select" name="bank_name">
+                                <option value="">Seleccionar...</option>
+                                <option value="BCP">BCP</option>
+                                <option value="BBVA">BBVA</option>
+                                <option value="Interbank">Interbank</option>
+                                <option value="Scotiabank">Scotiabank</option>
+                                <option value="BanBif">BanBif</option>
+                                <option value="Pichincha">Pichincha</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cuenta en Soles</label>
+                            <input type="text" class="form-control" name="bank_account_pen" placeholder="Número de cuenta PEN">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cuenta en Dólares</label>
+                            <input type="text" class="form-control" name="bank_account_usd" placeholder="Número de cuenta USD">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="createClient()">Registrar Cliente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Cliente -->
+<div class="modal fade" id="viewClientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="clientDetails">
+                <!-- Cargado dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Subir DNI -->
+<div class="modal fade" id="uploadDNIModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subir DNI del Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadDNIForm" enctype="multipart/form-data">
+                    <input type="hidden" name="client_id" id="upload_client_id">
+                    <p>Cliente: <strong id="upload_client_name"></strong></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">DNI Frontal</label>
+                        <input type="file" class="form-control" name="dni_front" accept="image/*,.pdf">
+                        <small class="form-text text-muted">Formatos: JPG, PNG, PDF (máx 10MB)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">DNI Reverso</label>
+                        <input type="file" class="form-control" name="dni_back" accept="image/*,.pdf">
+                        <small class="form-text text-muted">Formatos: JPG, PNG, PDF (máx 10MB)</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmUploadDNI()">Subir Archivos</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+<script>
+$(document).ready(function() {
+    // Inicializar DataTable
+    $('#clientsTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+        },
+        order: [[0, 'desc']],
+        pageLength: 25
+    });
+});
+</script>
+{% endblock %}

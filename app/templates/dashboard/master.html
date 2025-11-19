@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Master - QoriCash Trading{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-speedometer2"></i> Dashboard Master</h2>
+            <p class="text-muted">Bienvenido, {{ user.username }} - Acceso completo al sistema</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="bi bi-funnel"></i> Filtros
+            </button>
+        </div>
+    </div>
+    
+    <!-- Estadísticas del Día -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5><i class="bi bi-calendar-day"></i> Estadísticas de Hoy</h5>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Clientes Atendidos</h6>
+                            <h2 class="card-title mb-0" id="clientsToday">0</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Operaciones</h6>
+                            <h2 class="card-title mb-0" id="operationsToday">0</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Total USD</h6>
+                            <h2 class="card-title mb-0" id="usdToday">$ 0</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Total PEN</h6>
+                            <h2 class="card-title mb-0" id="penToday">S/ 0</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas del Mes -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5><i class="bi bi-calendar-month"></i> Estadísticas del Mes</h5>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Clientes del Mes</h6>
+                    <h3 class="card-title mb-0" id="clientsMonth">0</h3>
+                    <small class="text-muted">
+                        <span id="activeClientsMonth">0</span> activos
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Operaciones del Mes</h6>
+                    <h3 class="card-title mb-0" id="operationsMonth">0</h3>
+                    <small class="text-success">
+                        <i class="bi bi-check-circle"></i> <span id="completedMonth">0</span> completadas
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total USD Mes</h6>
+                    <h3 class="card-title mb-0 text-info" id="usdMonth">$ 0</h3>
+                    <small class="text-muted">Operaciones completadas</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total PEN Mes</h6>
+                    <h3 class="card-title mb-0 text-warning" id="penMonth">S/ 0</h3>
+                    <small class="text-muted">Operaciones completadas</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estado de Operaciones -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Estado de Operaciones</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <h4 class="text-warning" id="pendingCount">0</h4>
+                            <small class="text-muted">Pendientes</small>
+                        </div>
+                        <div class="col-3">
+                            <h4 class="text-info" id="inProcessCount">0</h4>
+                            <small class="text-muted">En Proceso</small>
+                        </div>
+                        <div class="col-3">
+                            <h4 class="text-success" id="completedCount">0</h4>
+                            <small class="text-muted">Completadas</small>
+                        </div>
+                        <div class="col-3">
+                            <h4 class="text-danger" id="canceledCount">0</h4>
+                            <small class="text-muted">Canceladas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h4 id="totalUsers">0</h4>
+                            <small class="text-muted">Usuarios</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 id="totalClients">0</h4>
+                            <small class="text-muted">Clientes</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 id="activeUsers">0</h4>
+                            <small class="text-muted">Activos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accesos Rápidos -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5><i class="bi bi-lightning"></i> Accesos Rápidos</h5>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <a href="{{ url_for('operations.create_page') }}" class="card card-link text-decoration-none">
+                <div class="card-body text-center">
+                    <i class="bi bi-plus-circle display-4 text-primary"></i>
+                    <h6 class="mt-3 mb-0">Nueva Operación</h6>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{{ url_for('operations.operations_list') }}" class="card card-link text-decoration-none">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-ul display-4 text-success"></i>
+                    <h6 class="mt-3 mb-0">Ver Operaciones</h6>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{{ url_for('clients.list_clients') }}" class="card card-link text-decoration-none">
+                <div class="card-body text-center">
+                    <i class="bi bi-people display-4 text-info"></i>
+                    <h6 class="mt-3 mb-0">Gestionar Clientes</h6>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{{ url_for('users.manage') }}" class="card card-link text-decoration-none">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-gear display-4 text-warning"></i>
+                    <h6 class="mt-3 mb-0">Gestionar Usuarios</h6>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Filtros -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filtrar Estadísticas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Mes</label>
+                    <select class="form-select" id="filterMonth">
+                        <option value="">Mes actual</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Año</label>
+                    <select class="form-select" id="filterYear">
+                        <option value="">Año actual</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="applyFilters()">Aplicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Cargar datos al iniciar
+$(document).ready(function() {
+    loadDashboardData();
+    
+    // Actualizar cada 30 segundos
+    setInterval(loadDashboardData, 30000);
+    
+    // Conectar a SocketIO para actualizaciones en tiempo real
+    connectSocketIO();
+});
+
+function refreshDashboard() {
+    loadDashboardData();
+    showAlert('Dashboard actualizado', 'success');
+}
+
+function applyFilters() {
+    const month = $('#filterMonth').val();
+    const year = $('#filterYear').val();
+    
+    loadDashboardData(month, year);
+    $('#filterModal').modal('hide');
+}
+</script>
+{% endblock %}

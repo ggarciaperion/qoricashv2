@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Operación - QoriCash Trading{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-plus-circle"></i> Crear Nueva Operación</h2>
+            <p class="text-muted">Registra una operación de cambio de divisas</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('operations.operations_list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver al Listado
+            </a>
+        </div>
+    </div>
+    
+    <!-- Formulario -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-currency-exchange"></i> Datos de la Operación</h5>
+                </div>
+                <div class="card-body">
+                    <form id="createOperationForm">
+                        <!-- Cliente -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-person"></i> Cliente</h6>
+                            <div class="row">
+                                <div class="col-md-10">
+                                    <label class="form-label">Seleccionar Cliente *</label>
+                                    <select class="form-select" name="client_id" id="client_id" required>
+                                        <option value="">Seleccionar cliente...</option>
+                                        {% for client in clients %}
+                                        <option value="{{ client.id }}" 
+                                                data-name="{{ client.name }}"
+                                                data-dni="{{ client.dni }}"
+                                                data-email="{{ client.email }}">
+                                            {{ client.name }} - DNI: {{ client.dni }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#quickClientModal">
+                                        <i class="bi bi-person-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="clientInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-info">
+                                    <strong>Cliente seleccionado:</strong><br>
+                                    <i class="bi bi-person"></i> <span id="clientName"></span><br>
+                                    <i class="bi bi-card-text"></i> DNI: <span id="clientDNI"></span><br>
+                                    <i class="bi bi-envelope"></i> <span id="clientEmail"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Tipo de Operación -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-arrow-left-right"></i> Tipo de Operación</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="operation_type" id="typeCompra" value="Compra" checked>
+                                        <label class="form-check-label" for="typeCompra">
+                                            <span class="badge bg-success">Compra USD</span> (Cliente vende dólares)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="operation_type" id="typeVenta" value="Venta">
+                                        <label class="form-check-label" for="typeVenta">
+                                            <span class="badge bg-primary">Venta USD</span> (Cliente compra dólares)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Montos -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-calculator"></i> Cálculo de la Operación</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Monto en USD *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" name="amount_usd" id="amount_usd" 
+                                               step="0.01" min="0" required onchange="calculatePEN()">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Tipo de Cambio *</label>
+                                    <input type="number" class="form-control" name="exchange_rate" id="exchange_rate" 
+                                           step="0.0001" min="0" required onchange="calculatePEN()">
+                                    <small class="form-text text-muted">Ejemplo: 3.7500</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Monto en PEN</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">S/</span>
+                                        <input type="text" class="form-control" id="amount_pen_display" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Cuentas Bancarias -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-bank"></i> Cuentas Bancarias</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Cuenta de Origen</label>
+                                    <input type="text" class="form-control" name="source_account" placeholder="Número de cuenta">
+                                    <small class="form-text text-muted">Cuenta desde donde se envía</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Cuenta de Destino</label>
+                                    <input type="text" class="form-control" name="destination_account" placeholder="Número de cuenta">
+                                    <small class="form-text text-muted">Cuenta donde se recibe</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Notas -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-sticky"></i> Notas</h6>
+                            <textarea class="form-control" name="notes" rows="3" placeholder="Información adicional o notas sobre la operación"></textarea>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Crear Operación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cliente Rápido -->
+<div class="modal fade" id="quickClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar Cliente Rápido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickClientForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo *</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">DNI *</label>
+                        <input type="text" class="form-control" name="dni" required maxlength="8">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="createQuickClient()">Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/operations.js') }}"></script>
+<script>
+// Mostrar info del cliente seleccionado
+$('#client_id').on('change', function() {
+    const selected = $(this).find(':selected');
+    if (selected.val()) {
+        $('#clientName').text(selected.data('name'));
+        $('#clientDNI').text(selected.data('dni'));
+        $('#clientEmail').text(selected.data('email'));
+        $('#clientInfo').slideDown();
+    } else {
+        $('#clientInfo').slideUp();
+    }
+});
+
+// Calcular monto en soles
+function calculatePEN() {
+    const usd = parseFloat($('#amount_usd').val()) || 0;
+    const rate = parseFloat($('#exchange_rate').val()) || 0;
+    const pen = usd * rate;
+    $('#amount_pen_display').val(pen.toFixed(2));
+}
+
+// Resetear formulario
+function resetForm() {
+    $('#createOperationForm')[0].reset();
+    $('#clientInfo').slideUp();
+    $('#amount_pen_display').val('');
+}
+
+// Crear operación
+$('#createOperationForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        client_id: parseInt($('#client_id').val()),
+        operation_type: $('input[name="operation_type"]:checked').val(),
+        amount_usd: parseFloat($('#amount_usd').val()),
+        exchange_rate: parseFloat($('#exchange_rate').val()),
+        source_account: $('input[name="source_account"]').val(),
+        destination_account: $('input[name="destination_account"]').val(),
+        notes: $('textarea[name="notes"]').val()
+    };
+    
+    // Validar
+    if (!formData.client_id || !formData.amount_usd || !formData.exchange_rate) {
+        showAlert('Por favor completa todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    // Enviar
+    ajaxRequest('/operations/api/create', 'POST', formData, function(response) {
+        showAlert('Operación creada exitosamente: ' + response.operation.operation_id, 'success');
+        setTimeout(function() {
+            window.location.href = '/operations/list';
+        }, 1500);
+    });
+});
+
+// Crear cliente rápido
+function createQuickClient() {
+    const formData = {
+        name: $('#quickClientForm input[name="name"]').val(),
+        dni: $('#quickClientForm input[name="dni"]').val(),
+        email: $('#quickClientForm input[name="email"]').val()
+    };
+    
+    ajaxRequest('/clients/api/create', 'POST', formData, function(response) {
+        showAlert('Cliente registrado exitosamente', 'success');
+        $('#quickClientModal').modal('hide');
+        
+        // Agregar a select y seleccionar
+        const option = $('<option></option>')
+            .attr('value', response.client.id)
+            .attr('data-name', response.client.name)
+            .attr('data-dni', response.client.dni)
+            .attr('data-email', response.client.email)
+            .text(response.client.name + ' - DNI: ' + response.client.dni);
+        
+        $('#client_id').append(option).val(response.client.id).trigger('change');
+    });
+}
+</script>
+{% endblock %}

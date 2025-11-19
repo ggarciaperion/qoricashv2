@@ -1,0 +1,89 @@
+"""
+Configuración de la aplicación QoriCash Trading V2
+"""
+import os
+from datetime import timedelta
+
+class Config:
+    """Configuración base"""
+    
+    # Flask
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    
+    # Database
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+    
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = False  # Set True for SQL debugging
+    
+    # Session
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        seconds=int(os.environ.get('PERMANENT_SESSION_LIFETIME', 43200))  # 12 hours
+    )
+    
+    # File Upload (Cloudinary)
+    CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB max file size
+    
+    # Rate Limiting
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', 'True') == 'True'
+    RATELIMIT_STORAGE_URL = "memory://"
+    
+    # Logging
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # Timezone
+    TIMEZONE = os.environ.get('TIMEZONE', 'America/Lima')
+    
+    # SocketIO
+    SOCKETIO_MESSAGE_QUEUE = os.environ.get('SOCKETIO_MESSAGE_QUEUE')
+    
+    # CSRF
+    WTF_CSRF_TIME_LIMIT = None  # No expiration
+    WTF_CSRF_SSL_STRICT = False  # Allow HTTPS in production
+
+
+class DevelopmentConfig(Config):
+    """Configuración para desarrollo"""
+    DEBUG = True
+    TESTING = False
+    SESSION_COOKIE_SECURE = False
+    SQLALCHEMY_ECHO = True  # Show SQL queries
+
+
+class ProductionConfig(Config):
+    """Configuración para producción"""
+    DEBUG = False
+    TESTING = False
+    SESSION_COOKIE_SECURE = True
+
+
+class TestingConfig(Config):
+    """Configuración para tests"""
+    TESTING = True
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
+
+# Diccionario de configuraciones
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}
+
+
+def get_config():
+    """Obtener configuración según el entorno"""
+    env = os.environ.get('FLASK_ENV', 'development')
+    return config.get(env, config['default'])

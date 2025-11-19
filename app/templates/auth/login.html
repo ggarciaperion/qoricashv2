@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Login - QoriCash Trading{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .login-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        overflow: hidden;
+        max-width: 400px;
+        width: 100%;
+    }
+    
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+    
+    .login-body {
+        padding: 40px;
+    }
+    
+    .brand-icon {
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="brand-icon">
+                        <i class="bi bi-currency-exchange"></i>
+                    </div>
+                    <h3 class="mb-0">QoriCash Trading</h3>
+                    <p class="mb-0 mt-2">Sistema de Gestión de Cambio</p>
+                </div>
+                
+                <div class="login-body">
+                    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="bi bi-person"></i> Usuario o Email
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   placeholder="Ingresa tu usuario" required autofocus>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="bi bi-lock"></i> Contraseña
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="Ingresa tu contraseña" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Mantener sesión iniciada
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center text-muted small">
+                        <p class="mb-0">QoriCash Trading © 2025</p>
+                        <p class="mb-0">Sistema de Gestión Profesional</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Focus en el campo de usuario
+    $('#username').focus();
+    
+    // Validación del formulario
+    $('#loginForm').on('submit', function(e) {
+        const username = $('#username').val().trim();
+        const password = $('#password').val();
+        
+        if (!username || !password) {
+            e.preventDefault();
+            showAlert('Por favor completa todos los campos', 'warning');
+            return false;
+        }
+        
+        // Deshabilitar botón para evitar doble envío
+        $(this).find('button[type="submit"]').prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Iniciando...');
+    });
+});
+</script>
+{% endblock %}
